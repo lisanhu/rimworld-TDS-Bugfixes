@@ -35,10 +35,16 @@ namespace TDS_Bug_Fixes
 	{
 		public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
+			//1. check if group absRect contains point, and is a better group to use...
 			MethodInfo ContainsInfo = AccessTools.Method(typeof(Rect), nameof(Rect.Contains), new Type[] { typeof(Vector2) });
 
+			//2. save hoveredGroup if it passes more checks
 			FieldInfo hoveredGroupInfo = AccessTools.Field(typeof(ReorderableWidget), nameof(ReorderableWidget.hoveredGroup));
 			FieldInfo lastInsertNearLeftInfo = AccessTools.Field(typeof(ReorderableWidget), nameof(ReorderableWidget.lastInsertNearLeft));
+
+			//3. Find better insert point instead of at the end 
+			MethodInfo FindLastReorderableIndexWithinGroupInfo = AccessTools.Method(typeof(ReorderableWidget), nameof(ReorderableWidget.FindLastReorderableIndexWithinGroup));
+
 
 			List<CodeInstruction> instList = instructions.ToList();
 			int hoverGroupIndex = -1;
@@ -47,38 +53,53 @@ namespace TDS_Bug_Fixes
 				// 1. Check if hoveredRect contains new hoveredRect
 				if (instList[i].Calls(ContainsInfo))
 				{
-					instList[i].operand = AccessTools.Method(typeof(FixReorderableHoveredGroup), nameof(RectContainsMouseAndInsideOld));
+					for (int j = i + 1; j < instList.Count; j++)
+					{
+						if (instList[j].StoresField(hoveredGroupInfo))
+						{
+							yield return instList[j - 1]; //j index of hoveredGroup
+							break;
+						}
+					}
+					yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(FixReorderableHoveredGroup), nameof(RectContainsMouseAndInsideOld)));
 				}
 
 				// 2.a. Move 'hoveredGroup = j' inside the if
-				else if (i < instList.Count - 1)
+				// If it's not hoveredGroup = -1, it's gonna be hoveredGroup = j (local int)
+				else if (i < instList.Count - 1 && instList[i + 1].StoresField(hoveredGroupInfo) && instList[i].opcode != OpCodes.Ldc_I4_M1)
 				{
-					//If it's not hoveredGroup = -1, it's gonna be hoveredGroup = j (local int)
-					if (instList[i + 1].StoresField(hoveredGroupInfo) && instList[i].opcode != OpCodes.Ldc_I4_M1)
-					{
-						hoverGroupIndex = i;
-						i += 2;
-					}
+					hoverGroupIndex = i;
+					i++;  //skip 'j' and next 'hoveredGroup = '
 				}
 
-				yield return instList[i];
-
-				if (instList[i].StoresField(lastInsertNearLeftInfo))
+				//3. find closest reorderable (again, after it was cleared when finding a parent group rect), not just the last index.
+				else if (instList[i].Calls(FindLastReorderableIndexWithinGroupInfo))
 				{
+					yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(FixReorderableHoveredGroup), nameof(FindCurrentInsertNearWithinGroup)));
+				}
+
+				else if (instList[i].StoresField(lastInsertNearLeftInfo))
+				{
+					// 3.b. Don't set lastInsertNearLeft, FindCurrentInsertNearWithinGroup just did
+					yield return new CodeInstruction(OpCodes.Pop);
+
 					// 2.b. Do 'hoveredGroup = j' only after 'lastInsertNearLeft = ...'
 					yield return instList[hoverGroupIndex]; // load j
 					yield return instList[hoverGroupIndex + 1]; // set static hoveredGroup = j
 				}
+				else
+					yield return instList[i];
 			}
 		}
 
-		public static bool RectContainsMouseAndInsideOld(ref Rect checkIfHoveredRect, Vector2 mousePos) =>
+		public static bool RectContainsMouseAndInsideOld(ref Rect checkIfHoveredRect, Vector2 mousePos, int hoveredIndex) =>
 			// Vanilla check "Is the mouse over this group"
 			checkIfHoveredRect.Contains(mousePos)
 				&&
-			// Also Check that the closest reorderable row is not within this rect
+			// Also Check that the closest reorderable row is in another group
 			(ReorderableWidget.lastInsertNear == -1 ||
-			!checkIfHoveredRect.Contains(ReorderableWidget.reorderables[ReorderableWidget.lastInsertNear].absRect.ContractedBy(1)))
+			ReorderableWidget.reorderables[ReorderableWidget.lastInsertNear].groupID != hoveredIndex &&
+			ReorderableWidget.groups[ReorderableWidget.reorderables[ReorderableWidget.lastInsertNear].groupID].absRect.Contains(checkIfHoveredRect.ContractedBy(1)))
 				&&
 			// Also Check that this rect is within the already hovered rect, if it exists.
 			(ReorderableWidget.hoveredGroup == -1 ||
@@ -88,6 +109,37 @@ namespace TDS_Bug_Fixes
 
 		public static bool Contains(this Rect self, Rect rect) =>
 			self.Contains(rect.min) && self.Contains(rect.max);
+
+
+
+		//copy/paste of CurrentInsertNear that uses same group only
+		private static int FindCurrentInsertNearWithinGroup(int groupID) // out bool toTheLeft) or just refer to the static field ...
+		{
+			ReorderableWidget.lastInsertNearLeft = true;
+
+			int nearestID = -1;
+			for (int i = 0; i < ReorderableWidget.reorderables.Count; i++)
+			{
+				ReorderableWidget.ReorderableInstance reorderableInstance = ReorderableWidget.reorderables[i];
+				if ((reorderableInstance.groupID == groupID) && (nearestID == -1 || Event.current.mousePosition.DistanceToRect(reorderableInstance.absRect) < Event.current.mousePosition.DistanceToRect(ReorderableWidget.reorderables[nearestID].absRect)))
+				{
+					nearestID = i;
+				}
+			}
+			if (nearestID >= 0)
+			{
+				ReorderableWidget.ReorderableInstance reorderableInstance2 = ReorderableWidget.reorderables[nearestID];
+				if (ReorderableWidget.groups[reorderableInstance2.groupID].direction == ReorderableDirection.Horizontal)
+				{
+					ReorderableWidget.lastInsertNearLeft = Event.current.mousePosition.x < reorderableInstance2.absRect.center.x;
+				}
+				else
+				{
+					ReorderableWidget.lastInsertNearLeft = Event.current.mousePosition.y < reorderableInstance2.absRect.center.y;
+				}
+			}
+			return nearestID;
+		}
 	}
 
 
@@ -108,7 +160,7 @@ namespace TDS_Bug_Fixes
 					yield return new CodeInstruction(OpCodes.Ldarga_S, 2); // ref rect, as this
 					yield return new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(Rect), nameof(Rect.position))); // rect.position
 				}
-				else if(inst.Calls(DrawLineInfo))
+				else if (inst.Calls(DrawLineInfo))
 				{
 					yield return new CodeInstruction(OpCodes.Pop);
 					yield return new CodeInstruction(OpCodes.Ldarg_S, 2);
