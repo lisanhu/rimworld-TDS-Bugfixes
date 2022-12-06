@@ -92,12 +92,14 @@ namespace TDS_Bug_Fixes
 
 
 	// For good measure while I'm here, fix the absRect in ReorderableWidget.NewGroup which threw out the rect position and used zero.
+	// Also, set the hovered DrawLine to use the rect as well! Geez.
 	[HarmonyPatch(typeof(ReorderableWidget), nameof(ReorderableWidget.NewGroup))]
 	public static class FixNewGroupAbsRect
 	{
 		public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			MethodInfo VectorZeroInfo = AccessTools.PropertyGetter(typeof(Vector2), nameof(Vector2.zero));
+			MethodInfo DrawLineInfo = AccessTools.Method(typeof(ReorderableWidget), nameof(ReorderableWidget.DrawLine));
 
 			foreach (var inst in instructions)
 			{
@@ -105,6 +107,12 @@ namespace TDS_Bug_Fixes
 				{
 					yield return new CodeInstruction(OpCodes.Ldarga_S, 2); // ref rect, as this
 					yield return new CodeInstruction(OpCodes.Call, AccessTools.PropertyGetter(typeof(Rect), nameof(Rect.position))); // rect.position
+				}
+				else if(inst.Calls(DrawLineInfo))
+				{
+					yield return new CodeInstruction(OpCodes.Pop);
+					yield return new CodeInstruction(OpCodes.Ldarg_S, 2);
+					yield return inst;
 				}
 				else
 					yield return inst;
