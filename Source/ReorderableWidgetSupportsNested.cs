@@ -188,6 +188,45 @@ namespace TDS_Bug_Fixes
 			ReorderableWidget.NewGroup(reorderedAction, direction, rect.AtZero(), drawLineExactlyBetween_space, extraDraggedItemOnGUI, playSoundOnStartReorder);
 	}
 
+	// There was a problem with dropping into the end of a list when a nested group was the last item.
+	// It would either snap to the nested items and not insert into the parent list,
+	// or at least the drawn line to insert into the parent list was below the parent line, but above the nested children
+	// The solution was to have the parent reorder rect extend around and below the children
+	// That required two conflicting things:
+	// If the Reorderable call for the parent came after the children, it would be dragged instead of the children, because code simply takes the last reorder rect
+	// So the parent Reorderable call would have to come first, so the children's rect's would come later they could be dragged.
+	// But now UI in the children would be active while dragging, or, the drag operation would cover up the UI...
+	//  (e.g. a 1-10 slider GUI would both drag the slider and drag the item, so that'd be weird)
+	// So the parent Reorderable call would have to come after the children, so that events in the children's UI would catch and use the event instead of dragging it.
+	// So the real solution is to not count the reorderect as dragged if there's already a dragged rect that is smaller than the new one.
+
+
+	// don't drag reorderable when moving floatslider (reorderable moved before drawing?)
+	// - transpile Reorderable IsOver(rect) to check if groupClicked != -1 && clickedInRect.Contains(rect.contractedby(1))
+
+	[HarmonyPatch(typeof(ReorderableWidget), nameof(ReorderableWidget.Reorderable))]
+	public static class FixNestedDrag
+	{
+		public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+		{
+			MethodInfo IsOverInfo = AccessTools.Method(typeof(Mouse), nameof(Mouse.IsOver));
+
+			foreach (var inst in instructions)
+			{
+				if (inst.Calls(IsOverInfo))
+					inst.operand = AccessTools.Method(typeof(FixNestedDrag), nameof(IsOverAndInsideClickedGroup));
+
+				yield return inst;
+			}
+		}
+
+		//public static bool IsOver(Rect rect)
+		public static bool IsOverAndInsideClickedGroup(Rect reorderRect) =>
+			Mouse.IsOver(reorderRect) &&
+			(!ReorderableWidget.clicked ||
+			ReorderableWidget.clickedInRect.Contains(reorderRect.ContractedBy(1)));
+	}
+
 	/*
 	//[HarmonyPatch(typeof(ColonistBar), nameof(ColonistBar.Visible), MethodType.Getter)]
 	public static class NoBar
