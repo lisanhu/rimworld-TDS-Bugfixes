@@ -213,18 +213,22 @@ namespace TDS_Bug_Fixes
 
 			foreach (var inst in instructions)
 			{
-				if (inst.Calls(IsOverInfo))
-					inst.operand = AccessTools.Method(typeof(FixNestedDrag), nameof(IsOverAndInsideClickedGroup));
-
 				yield return inst;
+
+				if (inst.Calls(IsOverInfo))
+				{
+					yield return new CodeInstruction(OpCodes.Ldarg_1);//Rect rect
+					yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(FixNestedDrag), nameof(InsideClickedGroup)));//InsideClickedGroup(rect)
+					yield return new CodeInstruction(OpCodes.And);//IsOver(rect) && InsideClickedGroup(rect)
+				}
+
 			}
 		}
 
 		//public static bool IsOver(Rect rect)
-		public static bool IsOverAndInsideClickedGroup(Rect reorderRect) =>
-			Mouse.IsOver(reorderRect) &&
-			(!ReorderableWidget.clicked ||
-			ReorderableWidget.clickedInRect.Contains(reorderRect.ContractedBy(1)));
+		public static bool InsideClickedGroup(Rect reorderRect) =>
+			!ReorderableWidget.clicked ||
+			ReorderableWidget.clickedInRect.Contains(reorderRect.ContractedBy(1));
 	}
 
 	/*
