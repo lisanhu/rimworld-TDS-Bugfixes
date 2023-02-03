@@ -28,10 +28,11 @@ namespace TDS_Bug_Fixes
 			base.DoSettingsWindowContents(inRect);
 			settings.DoWindowContents(inRect);
 		}
-
+		/*
 		public override string SettingsCategory()
 		{
 			return "TDS Bug Fixes";
 		}
+		*/
 	}
 }
