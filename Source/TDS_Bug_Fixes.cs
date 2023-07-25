@@ -31,7 +31,7 @@ namespace TDS_Bug_Fixes
 		/*
 		public override string SettingsCategory()
 		{
-			return "TDS Bug Fixes";
+			return "";
 		}
 		*/
 	}
