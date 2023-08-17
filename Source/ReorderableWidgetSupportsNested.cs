@@ -99,7 +99,8 @@ namespace TDS_Bug_Fixes
 			// Also Check that the closest reorderable row is in another group
 			(ReorderableWidget.lastInsertNear == -1 ||
 			ReorderableWidget.reorderables[ReorderableWidget.lastInsertNear].groupID != hoveredIndex &&
-			ReorderableWidget.groups[ReorderableWidget.reorderables[ReorderableWidget.lastInsertNear].groupID].absRect.Contains(checkIfHoveredRect.ContractedBy(1)))
+			(ReorderableWidget.groups[ReorderableWidget.reorderables[ReorderableWidget.lastInsertNear].groupID].absRect.Contains(checkIfHoveredRect.ContractedBy(1))
+			|| !checkIfHoveredRect.Contains(ReorderableWidget.groups[ReorderableWidget.reorderables[ReorderableWidget.lastInsertNear].groupID].absRect.ContractedBy(1))))
 				&&
 			// Also Check that this rect is within the already hovered rect, if it exists.
 			(ReorderableWidget.hoveredGroup == -1 ||
