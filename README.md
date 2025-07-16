@@ -12,36 +12,3 @@ He was a highly respected member of the RimWorld modding community, and he has m
 His family is willing to see that his work is being continued and memorialized by the community.
 
 Please always take a moment to pray for Alex and his family when you use his work.
-
-# License
-
-Alex's Legacy License (Based on MIT)
-
-Copyright (c) [year] Alex Tearse-Doyle “TD” (steam id: Uuugggg)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to use,
-copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-
-1. The above copyright notice and this permission notice shall be included
-   in all copies or substantial portions of the Software.
-
-2. The name “Alex Tearse-Doyle” shall be preserved as the original author of
-   the Software in any derivative works or redistributions.
-
-3. This license does not transfer ownership of the Software. All rights,
-   moral and legal, remain with the original author, Alex Tearse-Doyle, or his legal estate.
-
-4. The Software is provided “as is”, without warranty of any kind, express or
-   implied, including but not limited to the warranties of merchantability,
-   fitness for a particular purpose and noninfringement. In no event shall
-   the author or copyright holders be liable for any claim, damages or other
-   liability, whether in an action of contract, tort or otherwise, arising
-   from, out of or in connection with the Software or the use or other
-   dealings in the Software.
-
-IN MEMORY OF ALEX — Thank you for your creativity and contributions.
-
-
