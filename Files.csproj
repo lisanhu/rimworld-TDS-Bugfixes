@@ -1,29 +1,36 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <BaseIntermediateOutputPath>.vs\unused\</BaseIntermediateOutputPath>
+    <!-- <BaseIntermediateOutputPath>.vs\unused\</BaseIntermediateOutputPath> -->
     <ProjectGuid>{AA1EF112-E817-4ED1-849A-EE55B8DAF3C0}</ProjectGuid>
+    <TargetFramework>net472</TargetFramework>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <CopyBuildOutputToOutputDirectory>false</CopyBuildOutputToOutputDirectory>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <DebugType>none</DebugType>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <OutputPath>.\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-	<OutputPath>..\$(SolutionName) - Release\</OutputPath>
+    <OutputPath>..\$(SolutionName) - Release\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
-		<ReleaseFiles Include="About\**;Defs\**;Patches\**;Languages\**;Sounds\**;Textures\**;News\**;LoadFolders.xml"
-									Exclude="About\About-Release.xml;About\About.xml"/>
-		<AboutFiles Include="About\About-Release.xml;About\About.xml"/>
+    <ReleaseFiles Include="About\**;Defs\**;Patches\**;Languages\**;Sounds\**;Textures\**;News\**;LoadFolders.xml"
+      Exclude="About\About-Release.xml;About\About.xml" />
+    <AboutFiles Include="About\About-Release.xml;About\About.xml" />
   </ItemGroup>
   <Target Name="Clean" />
-	<Target Name="_IsProjectRestoreSupported"
-          Returns="@(_ValidProjectsForRestore)">
+  <Target Name="_IsProjectRestoreSupported"
+    Returns="@(_ValidProjectsForRestore)">
     <ItemGroup>
       <_ValidProjectsForRestore Include="$(MSBuildProjectFullPath)" />
     </ItemGroup>
   </Target>
   <Target Name="Restore" />
-  <Target Name="Build">
+  <!-- <Target Name="Build">
     <Copy Condition=" '$(Configuration)' == 'Release' "
 					SourceFiles="About\About-Release.xml" 
           DestinationFiles="$(OutputPath)About\About.xml" 
@@ -32,6 +39,14 @@
 					SourceFiles="@(ReleaseFiles)"
 					DestinationFiles="@(ReleaseFiles->'$(OutputPath)%(RelativeDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true" />
+  </Target> -->
+  <Target Name="CopyFiles" AfterTargets="Build" Condition=" '$(Configuration)' == 'Release' ">
+    <Copy SourceFiles="About\About-Release.xml"
+      DestinationFiles="$(OutputPath)About\About.xml"
+      SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(ReleaseFiles)"
+      DestinationFiles="@(ReleaseFiles->'$(OutputPath)%(RelativeDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
   </Target>
   <Target Name="Rebuild" />
   <Target Name="PostBuild" AfterTargets="Build">
